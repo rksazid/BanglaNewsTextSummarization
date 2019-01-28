@@ -9,6 +9,8 @@ import xml.etree.ElementTree as ET
 from nltk.tokenize import word_tokenize,sent_tokenize
 import re as regex
 import math
+from scipy import linalg, mat, dot
+import numpy as np
 
 class BengaliTok:
     def __init__(self, corpus):
@@ -18,8 +20,8 @@ class BengaliTok:
         self.text = self.match_obj.group(2)
         self.text = regex.sub(r'[\\|;|]','',self.text)
         
-        print(self.title)
-        print(self.text)
+        #print(self.title)
+        #print(self.text)
         
         #------------- Handling "Qouted" sentence ---------- 
         
@@ -28,7 +30,6 @@ class BengaliTok:
         flag=False
         while i < l:
             if (self.text[i]=='"') and (flag==False):
-                #print("hi"+str(i))
                 flag=True
                 i=i+1
                 continue
@@ -37,7 +38,6 @@ class BengaliTok:
                 self.text=self.text[:i+1]+"।"+self.text[i+1:]
                 #l=l+1
             if flag==True and self.text[i] == '।':
-                #print("world")
                 self.text = self.text[:i]+'#'+self.text[i+1:]
             i=i+1
         print(self.text)
@@ -50,14 +50,16 @@ class BengaliTok:
         bn_stw = open('./stop_words.txt','r', encoding='utf-8')
         self.stop_words = "".join(bn_stw.readlines())
         self.stop_words = set(self.stop_words.split())
-        print(self.stop_words)
+        #print(self.stop_words)
         
         #return stop_words
 
     def bn_sentence_tok(self, pattern):
-        corpus = self.title + "।" + self.text
+        #corpus = self.title + "।" + self.text
+        corpus = self.text
         #print(corpus)
-        bn_tokens_sen = regex.split(pattern, corpus)
+        bn_tokens_sen_mod = regex.split(pattern, corpus)
+        bn_tokens_sen = [s for s in bn_tokens_sen_mod if s]
         ln=len(bn_tokens_sen)
         for i in range(ln):
             bn_tokens_sen[i] = regex.sub(r'#',"।",bn_tokens_sen[i])
@@ -105,18 +107,48 @@ class TFIDF():
 
 
 class Sentences:
-    def __init__(self, idx, ln, wrds):
+    def __init__(self, idx, ln, wrds, n_):
         self.index = idx
+        self.n=n_
         self.line = ln
         self.words = wrds
         self.tfidf = 0.00
+        self.sf = 1.00
         self.score = 0.00
-        
+        self.cos_sim = []
+        #self.cos_sim = [0 for y in range(self.n)]
+
+def cosSim(w1,w2):
+    words_list = set(w1+w2)
+    #print(words_list)
+    mat1=[]
+    mat2=[]
+    for w in words_list:
+        mat1.append(w1.count(w))
+        mat2.append(w2.count(w))
+    
+    #print(mat1,mat2)
+    length = len(mat1)
+    m_2d=[[0 for i in range(length)] for j in range(2)]
+    
+    for i in range(length):
+        m_2d[0][i]=mat1[i]
+    for i in range(length):
+        m_2d[1][i]=mat2[i]
+            
+    #print(m_2d)
+    matrix = mat( m_2d )
+    cosim = dot(matrix[0],matrix[1].T)/np.linalg.norm(matrix[0])/np.linalg.norm(matrix[1])
+    #print(cosim)
+    for n in cosim.A:
+        for m in n:
+            return m
+    
 #================= MAIN ===============================
 
 
 #-------- input--------
-path='.\Dataset1\Documents\Document_1.txt'
+path='.\Dataset1\Documents\Document_2.txt'
 
 input_file = open(path,'r', encoding='utf-8')
 doc=input_file.read()
@@ -126,39 +158,56 @@ doc=input_file.read()
 bn_tokens = BengaliTok(doc)
 bn_tokens.bn_stop_words()
 tokenized_sentences = bn_tokens.bn_sentence_tok(r'[?|।|!]')
-print(tokenized_sentences)
+#print(tokenized_sentences)
 tokenized_words = bn_tokens.bn_word_tok()
-print(tokenized_words)
+#print(tokenized_words)
 
-#  make a list of Sentence class 
+#------- make a list of Sentence class ----------------
 sentences_list = []
 ln = len(tokenized_sentences)
 for i in range(ln):
     if tokenized_sentences[i]:
-        sentences_list.append(Sentences(i,tokenized_sentences[i],tokenized_words[i]))
+        sentences_list.append(Sentences(i,tokenized_sentences[i],tokenized_words[i],ln))
 '''
 for obj in sentences_list:
     print(obj.index,obj.line,obj.words)
 '''
 #=========== TF-IDF Calcualtion For every sentence ============
 
-# make a list of all token in a document
+# ---------- make a list of all token in a document
 tokenized_documents = []
 for lst in tokenized_words:
     tokenized_documents += tokenized_words[lst]
-    print(tokenized_words[lst])
+    #print(tokenized_words[lst])
 
 print(tokenized_documents)
 
+# -------------- tf-idf calculation start-------------
 tfidf_obj = TFIDF()
-#tf=tfidf_obj.tf("জামিন",' '.join(tokenized_sentences))
-tf=tfidf_obj.tf("জামিন",tokenized_documents)
-print(tf)
-idf=tfidf_obj.idf("জামিন",' '.join(tokenized_sentences))
-print(idf)
-tfIdf=tfidf_obj.tf_idf("জামিন",tokenized_documents,' '.join(tokenized_sentences))
-print(tfIdf)
-print(tf*idf)
+
+i=0
+for obj in sentences_list:
+    tfidf=0
+    for word in obj.words:
+        tfidf+=tfidf_obj.tf_idf(word,tokenized_documents,' '.join(tokenized_sentences))
+    sentences_list[obj.index].tfidf=tfidf
+
+
+#=========== Cosine Similarity Calculaion =============
+
+for i in range(ln):
+    for j in range(ln):
+        if i != j:
+            w1=sentences_list[i].words
+            w2=sentences_list[j].words
+            cosine_sim = cosSim(w1,w2)
+            sentences_list[i].cos_sim.append(cosine_sim)
+        else:
+            sentences_list[i].cos_sim.append(0.0)
+
+for obj in sentences_list:
+    print(obj.index,obj.line,obj.words,obj.tfidf,obj.cos_sim)
+
 '''
 #----------Stop_words reads-------------------
 
