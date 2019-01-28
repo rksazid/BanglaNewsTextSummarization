@@ -40,7 +40,7 @@ class BengaliTok:
             if flag==True and self.text[i] == '।':
                 self.text = self.text[:i]+'#'+self.text[i+1:]
             i=i+1
-        print(self.text)
+        #print(self.text)
         
         #--------------------------------------------------
 
@@ -66,9 +66,9 @@ class BengaliTok:
 
         return bn_tokens_sen
 
-    def bn_word_tok(self):
+    def bn_word_tok(self,sent_tok):
         word_tokens = {}
-        sent_tok = self.bn_sentence_tok(r'[?|।!]')
+        #sent_tok = self.bn_sentence_tok(r'[?|।|!]')
         i=0
         for tokenized_sent in sent_tok:
             tokenized_sent = regex.sub(r'[,|(|)|-|—|!|"|`|’|‘|“|\?|\\|:|\n|।|\.]+','',tokenized_sent)
@@ -107,16 +107,16 @@ class TFIDF():
 
 
 class Sentences:
-    def __init__(self, idx, ln, wrds, n_):
+    def __init__(self, idx, ln, wrds):
         self.index = idx
-        self.n=n_
         self.line = ln
         self.words = wrds
         self.tfidf = 0.00
         self.sf = 1.00
         self.score = 0.00
         self.cos_sim = []
-        #self.cos_sim = [0 for y in range(self.n)]
+        self.names = []
+        self.status = True
 
 def cosSim(w1,w2):
     words_list = set(w1+w2)
@@ -147,19 +147,19 @@ def cosSim(w1,w2):
 #================= MAIN ===============================
 
 
-#-------- input--------
+#-------------- input ------------------
 path='.\Dataset1\Documents\Document_2.txt'
 
 input_file = open(path,'r', encoding='utf-8')
 doc=input_file.read()
 #print(doc)
 
-#------- tokenization-------
+#------------- tokenization-------------
 bn_tokens = BengaliTok(doc)
 bn_tokens.bn_stop_words()
 tokenized_sentences = bn_tokens.bn_sentence_tok(r'[?|।|!]')
 #print(tokenized_sentences)
-tokenized_words = bn_tokens.bn_word_tok()
+tokenized_words = bn_tokens.bn_word_tok(tokenized_sentences)
 #print(tokenized_words)
 
 #------- make a list of Sentence class ----------------
@@ -167,20 +167,25 @@ sentences_list = []
 ln = len(tokenized_sentences)
 for i in range(ln):
     if tokenized_sentences[i]:
-        sentences_list.append(Sentences(i,tokenized_sentences[i],tokenized_words[i],ln))
+        sentences_list.append(Sentences(i,tokenized_sentences[i],tokenized_words[i]))
 '''
 for obj in sentences_list:
     print(obj.index,obj.line,obj.words)
 '''
+
+#   =================     ===================
+print(sentences_list[0].words)
+#sentences_list[0].names.append()
+
+
 #=========== TF-IDF Calcualtion For every sentence ============
 
-# ---------- make a list of all token in a document
+# ---------- make a list of all token in a document---------
 tokenized_documents = []
 for lst in tokenized_words:
     tokenized_documents += tokenized_words[lst]
-    #print(tokenized_words[lst])
 
-print(tokenized_documents)
+#print(tokenized_documents)
 
 # -------------- tf-idf calculation start-------------
 tfidf_obj = TFIDF()
@@ -205,10 +210,34 @@ for i in range(ln):
         else:
             sentences_list[i].cos_sim.append(0.0)
 
+#======== Sentence Redundancy elemeation using cosine similarity value ========
+   
+#print(len(sentences_list[4].line))
+for i in range(ln):
+    for j in range(ln):
+        if i == j:
+            continue
+        elif sentences_list[i].cos_sim[j] > 0.5:
+            if len(sentences_list[i].line) > len(sentences_list[j].line):
+                sentences_list[i].sf+=1
+                sentences_list[j].status = False
+            else:
+                sentences_list[j].sf+=1
+                sentences_list[i].status = False
+                
 for obj in sentences_list:
-    print(obj.index,obj.line,obj.words,obj.tfidf,obj.cos_sim)
+    print(obj.index,obj.line,obj.words,obj.tfidf,obj.cos_sim,obj.status)
 
 '''
+
+for i in range(ln):
+    for j in range(ln):
+        if i == j:
+            continue
+        elif sentences_list[i].cos_sim[j] > 0.6:
+            if len(sentences_list[i].line) > len(sentences_list[j].line):
+                
+
 #----------Stop_words reads-------------------
 
 bn_stw = open('./stop_words.txt','r', encoding='utf-8')
