@@ -6,10 +6,15 @@ Created on Fri Jan 25 16:16:59 2019
 """
 
 import NameRecognition as nr
+import PronounReplacement as pr
 import CosineSimilarity as csim
+import BanglaStemmer as bs
 import BanglaTokenization as bnTok
 import tfidf
+from copy import deepcopy
+from operator import attrgetter
 
+# Sentence Class that contains every attributes of a sentence
 class Sentences:
     def __init__(self, idx, ln, wrds):
         self.index = idx
@@ -20,64 +25,71 @@ class Sentences:
         self.score = 0.00
         self.cos_sim = []
         self.names = []
+        self.subj_noun=[]
+        self.obj_noun=[]
+        self.tw = 0.0
         self.status = True
 
 
     
-#================= MAIN ===============================
+#================================ MAIN ========================================
 
-
-#-------------- input ------------------
-path='.\Dataset1\Documents\Document_1.txt'
+#input
+path='.\Dataset1\Documents\Document_5.txt'
 
 input_file = open(path,'r', encoding='utf-8')
 doc=input_file.read()
-#print(doc)
 
-#------------- tokenization-------------
+#tokenization
 bn_tokens = bnTok.BengaliTok(doc)
 bn_tokens.bn_stop_words()
 tokenized_sentences = bn_tokens.bn_sentence_tok(r'[?|।|!]')
-#print(tokenized_sentences)
 tokenized_words = bn_tokens.bn_word_tok(tokenized_sentences)
-#print(tokenized_words)
 
-#------- make a list of Sentence class ----------------
+#make a list of Sentence class
 sentences_list = []
 ln = len(tokenized_sentences)
 for i in range(ln):
     if tokenized_sentences[i]:
-        sentences_list.append(Sentences(i,tokenized_sentences[i],tokenized_words[i]))
-'''
+        sentences_list.append(Sentences(i,tokenized_sentences[i],
+                                        tokenized_words[i]))
+
+#============================== Stemming ======================================
+
 for obj in sentences_list:
-    print(obj.index,obj.line,obj.words)
-'''
+    obj.words=bs.stemming(obj.words)
 
-#   ================= Name recognition  ===================
+#========================== Name recognition  =================================
 
-#print(nr.nameRecognition(sentences_list[19].words))
+for obj in sentences_list:
+    names = nr.nameRecognition(deepcopy(obj.words))
+    obj.names += names
 
-#=========== TF-IDF Calcualtion For every sentence ============
+#========================== Pronoun replacemnet ===============================
 
-# ---------- make a list of all token in a document---------
+pr.proReplace(sentences_list)
+
+#===================== TF-IDF Calcualtion For every sentence ==================
+
+# make a list of all token in a document
 tokenized_documents = []
 for lst in tokenized_words:
     tokenized_documents += tokenized_words[lst]
 
-#print(tokenized_documents)
 
-# -------------- tf-idf calculation start-------------
+#tf-idf calculation start
 tfidf_obj = tfidf.TFIDF()
 
 i=0
 for obj in sentences_list:
     tfidf=0
     for word in obj.words:
-        tfidf+=tfidf_obj.tf_idf(word,tokenized_documents,' '.join(tokenized_sentences))
+        tfidf+=tfidf_obj.tf_idf(word,tokenized_documents,
+                                ' '.join(tokenized_sentences))
     sentences_list[obj.index].tfidf=tfidf
 
 
-#=========== Cosine Similarity Calculaion =============
+#======================== Cosine Similarity Calculaion ========================
 
 for i in range(ln):
     for j in range(ln):
@@ -91,12 +103,11 @@ for i in range(ln):
 
 #======== Sentence Redundancy elemeation using cosine similarity value ========
    
-#print(len(sentences_list[4].line))
 for i in range(ln):
     for j in range(ln):
         if i == j:
             continue
-        elif sentences_list[i].cos_sim[j] > 0.5:
+        elif sentences_list[i].cos_sim[j] > 0.6:
             if len(sentences_list[i].line) > len(sentences_list[j].line):
                 sentences_list[i].sf+=1
                 sentences_list[j].status = False
@@ -104,12 +115,84 @@ for i in range(ln):
                 sentences_list[j].sf+=1
                 sentences_list[i].status = False
                 
-for obj in sentences_list:
-    print(obj.index,obj.line,obj.words,obj.tfidf,obj.cos_sim,obj.status)
+#================== Title word score calculation =============================
 
+title_words = bn_tokens.title
+for obj in sentences_list:
+    for w in title_words:
+        if w in obj.words:
+            obj.tw+=1.0
+
+
+for obj in sentences_list:
+    print("")
+    print(obj.index,obj.line,obj.words,obj.tfidf,obj.cos_sim,obj.status,
+                                      obj.names,obj.tw)
+
+#========================= Sentence Selection =================================
+
+if sentences_list[0].tw > 0:
+    sentences_list[0].score = 1000
+
+summary = ""
+summary_list=[]
+w1=1
+w2=1
+w3=1
+for obj in sentences_list:
+    if obj.index > 0:
+        obj.score = w1*obj.tfidf+ w2*obj.sf + w3*obj.tw
+    else:
+        if sentences_list[0].tw > 0:
+            obj.score = 1000
+        else:
+            obj.score = w1*obj.tfidf+ w2*obj.sf + w3*obj.tw
+
+print("")
+for obj in sentences_list:
+    print(obj.index, obj.score)
+
+sentences_list.sort(key=attrgetter('score'),reverse=True)
+print("")
+for obj in sentences_list:
+    print(obj.index, obj.score)
+
+for obj in sentences_list:
+    if obj.status:
+        summary_list.append(deepcopy(obj))
+print("")
+for obj in summary_list:
+    print(obj.index, obj.score)
+
+sz = round(len(summary_list)/3)
+print(sz)
+
+final_list = []
+i=0
+for obj in summary_list:
+    if i<sz:
+        final_list.append(obj)
+    i+=1
+print("")
+for obj in final_list:
+    print(obj.index, obj.score)
+
+final_list.sort(key=attrgetter('index'))
+
+print("")
+for obj in final_list:
+    print(obj.index, obj.score)
+    
+print("")    
+for obj in final_list:
+    summary+=obj.line+"। "
+
+
+print(bn_tokens.text)
+print(" ")
+print(summary)
 
 '''
-
 for i in range(ln):
     for j in range(ln):
         if i == j:

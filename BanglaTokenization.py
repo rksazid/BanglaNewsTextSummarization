@@ -4,13 +4,14 @@
 """
 
 import re as regex
-from nltk.tokenize import word_tokenize,sent_tokenize
+from nltk.tokenize import word_tokenize
+
 
 class BengaliTok:
     def __init__(self, corpus):
         self._bangla_corpus = regex.sub(r'[\n]+','',corpus)
         self.match_obj = regex.search( r'Title:(.*)Text:(.*)', self._bangla_corpus)
-        self.title = self.match_obj.group(1)
+        self.title = word_tokenize(self.match_obj.group(1))
         self.text = self.match_obj.group(2)
         self.text = regex.sub(r'[\\|;|]','',self.text)
         

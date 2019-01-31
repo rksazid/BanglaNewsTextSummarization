@@ -3,7 +3,7 @@ from nltk.tokenize import word_tokenize, sent_tokenize
 import re as regex
 
 
-def nameRecognition(lst):
+def nameRecognition(tokenizeDocument):
     
     ###........... Read from Name File..........
     
@@ -11,18 +11,8 @@ def nameRecognition(lst):
     HumName = " ".join(readName.readlines())
     Name = set(HumName.split())
     
-    ###.......... Read from Document..........
     
-    path = '.\Dataset1\Documents\Document_1.txt'
-    input_file = open(path, 'r', encoding='utf-8')
-    strDocument = input_file.read()
-    
-    
-    
-    #tokenizeDocument =['ধর্মীয়', 'অনুভূতিতে', 'আঘাতের', 'অভিযোগে', '১০', 'মামলায়', 'হাইকোর্ট', 'জামিন', 'পেয়েছেন', 'সাবেক', 'মন্ত্রী', 'আবদুল', 'লতিফ', 'সিদ্দিকী',]
-    tokenizeDocument = lst
     tokenizeDocument.append('###')
-    #print(tokenizeDocument)
     
     
     
@@ -31,7 +21,7 @@ def nameRecognition(lst):
     "ভূঁইয়া","ভূঁঞা", "কাজি", "গোলন্দাজ", "দেওয়ান", "নিয়াজী","খন্দকার" , "পটোয়ারী", "মুন্সী্‌" ,"মুহুরী", "মৃধা", "লস্কর","সরকার","হাজারী","প্রামাণিক্‌",
      "পোদ্দার","সরদার" , "হাওলদার","শিকদার","জোয়ার্দার","ইনামদার","বেগ","লোহানী","ঢালী" ]
     # print(preName[len(preName)-1])
-    postName = ["আহমদ", "কবির", "আলী", "খান","মীর", "আরা", "বেগম", "খাতুন", "বড়ুয়া", "আলম", "হাওলাদার", "রহমান", "ইসলাম",
+    postName = ["আহমদ", "কবির","মিয়া", "আলী", "খান","মীর", "আরা", "বেগম", "খাতুন", "বড়ুয়া", "আলম", "হাওলাদার", "রহমান", "ইসলাম",
     "উদ্দিন", "কাজী", "হক", "হোসেন", "মোল্লা", "শেখ", "তালুকদার", "গাজী", "চৌধুরী", "মিয়াঁ", "চক্রবর্তী", "বড়ুয়া", "চাক্মা", "হাজারী",
      "সাহা", "ভৌমিক", "রায়", "মণ্ডল", "চন্দ্র", "কুমার", "ভট্টাচার্য", "তেওয়ারি", "চক্রবর্ত্তী", "শর্মা", "দেবনাথ","নাথ‌", "ঠাকুর",""
      "উপাধ্যায়", "গঙ্গোপাধ্যায়","গাঙ্গুলী", "চট্টোপাধ্যায়","চ্যাটার্জি", "বন্দোপাধ্যায়","ব্যানার্জি", "মুখোপাধ্যায়","মুখার্জি", "বাগচী",
@@ -69,8 +59,8 @@ def nameRecognition(lst):
     
     NameList1 = []
     
-    CopyDocument1 = word_tokenize(strDocument)
-    tokenizeDocument1 = CopyDocument1
+    #CopyDocument1 = word_tokenize(strDocument)
+    #tokenizeDocument1 = CopyDocument1
     #print(tokenizeDocument)
     
     flag1 = 1
