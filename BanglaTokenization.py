@@ -8,12 +8,15 @@ from nltk.tokenize import word_tokenize
 
 
 class BengaliTok:
-    def __init__(self, corpus):
+    def __init__(self, corpus,t):
         self._bangla_corpus = regex.sub(r'[\n]+','',corpus)
-        self.match_obj = regex.search( r'Title:(.*)Text:(.*)', self._bangla_corpus)
-        self.title = word_tokenize(self.match_obj.group(1))
-        self.text = self.match_obj.group(2)
-        self.text = regex.sub(r'[\\|;|]','',self.text)
+        if t == "general":
+            self.match_obj = regex.search( r'Title:(.*)Text:(.*)', self._bangla_corpus)
+            self.title = word_tokenize(self.match_obj.group(1))
+            self.text = self.match_obj.group(2)
+            self.text = regex.sub(r'[\\|;|]','',self.text)
+        else:
+            self.text = self._bangla_corpus
         
         #------------- Handling "Qouted" sentence ---------- 
         
@@ -27,9 +30,10 @@ class BengaliTok:
                 continue
             if (self.text[i]=='"') and (flag==True):
                 flag=False
-                self.text=self.text[:i+1]+"।"+self.text[i+1:]
-                #l=l+1
-            if flag==True and self.text[i] == '।':
+                if i+1 < l:
+                    if self.text[i+1]!="।":
+                        self.text=self.text[:i+1]+"।"+self.text[i+1:]
+            if flag==True and (self.text[i] == '।' or self.text[i] == '?'):
                 self.text = self.text[:i]+'#'+self.text[i+1:]
             i=i+1
         #print(self.text)
@@ -51,7 +55,11 @@ class BengaliTok:
         corpus = self.text
         #print(corpus)
         bn_tokens_sen_mod = regex.split(pattern, corpus)
-        bn_tokens_sen = [s for s in bn_tokens_sen_mod if s]
+        bn_tokens_sen = []
+        for s in bn_tokens_sen_mod:
+            if s:
+                bn_tokens_sen.append(s)
+        
         ln=len(bn_tokens_sen)
         for i in range(ln):
             bn_tokens_sen[i] = regex.sub(r'#',"।",bn_tokens_sen[i])
